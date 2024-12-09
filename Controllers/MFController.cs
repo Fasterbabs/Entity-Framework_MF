@@ -18,6 +18,18 @@ namespace Entity_Framework_MF.Controllers
             _dataContext = context;
         }
 
+        [HttpGet]
+        public async Task<ActionResult<Character>> GetCharacterById(int id)
+        {
+            var character = await _dataContext.Characters
+                .Include(c => c.Backpack)
+                .Include(c => c.Weapons)
+                .Include(c => c.Factions)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            return Ok(character);
+        }
+
         [HttpPost]
         public async Task<ActionResult<List<Character>>> CreateCharacter(CharacterCreateDto request)
         {
@@ -27,13 +39,17 @@ namespace Entity_Framework_MF.Controllers
             };
 
             var backpack = new Backpack { Description = request.Backpack.Description, Character = newCharacter };
+            var weapons = request.Weapons.Select(w => new Weapon { Name = w.Name, Character = newCharacter }).ToList();
+            var factions = request.Factions.Select(f => new Faction { Name = f.Description, Characters = new List<Character> { newCharacter } }).ToList();
 
             newCharacter.Backpack = backpack;
+            newCharacter.Weapons = weapons;
+            newCharacter.Factions = factions;
 
             _dataContext.Characters.Add(newCharacter);
             await _dataContext.SaveChangesAsync();
 
-            return Ok(await _dataContext.Characters.Include(c => c.Backpack).ToListAsync());
+            return Ok(await _dataContext.Characters.Include(c => c.Backpack).Include(c => c.Weapons).ToListAsync());
         }
     }
 }
